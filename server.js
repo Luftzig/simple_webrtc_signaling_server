@@ -67,6 +67,7 @@ io.on("connection", (socket) => {
       console.log(`Added ${peerId} to connections`);
       // Let new peer know about all exisiting peers
       socket.send({
+        type: "ready",
         from: "all",
         target: peerId,
         payload: {action: "open", connections: Object.values(connections), bePolite: false}
@@ -77,6 +78,7 @@ io.on("connection", (socket) => {
       connections[peerId] = newPeer;
       // Let all other peers know about new peer
       socket.broadcast.emit("message", {
+        type: "ready",
         from: peerId,
         target: "all",
         payload: {action: "open", connections: [newPeer], bePolite: true}, // send connections object with an array containing the only new peer and make all exisiting peers polite.
@@ -85,6 +87,7 @@ io.on("connection", (socket) => {
   });
   socket.on("message", (message) => {
     // Send message to all peers expect the sender
+    console.log("received message", message)
     socket.broadcast.emit("message", message);
   });
   socket.on("messageOne", (message) => {
@@ -97,12 +100,32 @@ io.on("connection", (socket) => {
       console.log(`Target ${target} not found`);
     }
   });
+  socket.on("countdown", (message) => {
+    const {outOf, intervalMs} = message
+    let count = 0
+    let intervalHandler = setInterval(() => {
+      console.log("Countdown tick at", new Date(), count, "out of", outOf)
+      const payload = {
+        type: "countdown",
+        count: count,
+        outOf,
+        intervalMs
+      }
+      socket.broadcast.emit("message", payload)
+      socket.send(payload)
+      count++
+      if (count > outOf) {
+        clearInterval(intervalHandler)
+      }
+    }, intervalMs)
+  })
   socket.on("disconnect", () => {
     const disconnectingPeer = Object.values(connections).find((peer) => peer.socketId === socket.id);
     if (disconnectingPeer) {
       console.log("Disconnected", socket.id, "with peerId", disconnectingPeer.peerId);
       // Make all peers close their peer channels
       socket.broadcast.emit("message", {
+        type: "disconnect",
         from: disconnectingPeer.peerId,
         target: "all",
         payload: {action: "close", message: "Peer has left the signaling server"},
@@ -115,7 +138,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("clock", () => {
-    io.to(socket.id).send("clock", {server: new Date()})
+    io.to(socket.id).send("message", {type: "clock", server: new Date()})
   })
 
   if (PING) {
