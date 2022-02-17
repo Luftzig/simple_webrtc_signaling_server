@@ -1,15 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>WebRTC Signaling Server</title>
-    </head>
-    <body>
-        <h1>Running well</h1>
-        <!-- <script src="/socket.io/socket.io.js"></script>
-        <script>
-            var socket = io();
-        </script> -->
-    </body>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>WebRTC Signaling Server</title>
+</head>
+<body>
+<h1>Running well</h1>
+<article>
+    <span id="clock"/>
+</article>
+<script>
+  setInterval(() => fetch('/clock')
+    .then(res => res.json())
+    .then(({server}) => {
+        const timeElement = document.getElementById("clock")
+        timeElement.innerText = server
+      }
+    ), 60*1000)
+</script>
+</body>
 </html>
